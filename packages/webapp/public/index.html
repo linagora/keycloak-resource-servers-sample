@@ -1,0 +1,99 @@
+<html>
+  <head>
+    <script src="http://localhost:8080/auth/js/keycloak.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+  </head>
+
+  <body>
+    <div id="app">
+      <div v-if="ready">
+        <div>
+          <span>You are authenticated as {{ username }} - <a @click="keycloak.logout()">logout</a></span>
+        </div>
+
+        <span>HTTP calls with Bearer Authorization Header (access token)</span>
+        <ul>
+          <li>Service with good client role {{authenticated.service}}</li>
+          <li>Service with good realm role {{authenticated.good}}</li>
+          <li>Service with bad realm role {{authenticated.bad}}</li>
+        </ul>
+        <span>HTTP calls without Bearer Authorization Header</span>
+        <ul>
+          <li>Service with good client role {{anonymous.service}}</li>
+          <li>Service with good realm role {{anonymous.good}}</li>
+          <li>Service with bad realm role {{anonymous.bad}}</li>
+        </ul>
+      </div>
+      <div v-else>
+        <span>About to authenticate...</span>
+      </div>
+    </div>
+  </body>
+
+  <script>
+    var app = new Vue({
+      el: '#app',
+      data: {
+        ready: false,
+        username: null,
+        keycloak: null,
+        authenticated: {
+          service: null,
+          good: null,
+          bad: null
+        },
+        anonymous: {
+          service: null,
+          good: null,
+          bad: null
+        }
+      },
+      mounted() {
+        this.keycloak = new Keycloak(
+          {
+            url: 'http://localhost:8080/auth',
+            realm: 'resource-server-realm',
+            clientId: 'webapp'
+          }
+        );
+        this.keycloak.init({ promiseType: 'native' })
+          .then(authenticated => {
+            if (!authenticated) {
+              return this.keycloak.login();
+            }
+            this.ready = true;
+            this.username = this.keycloak.idTokenParsed.preferred_username;;
+
+            Promise.all([
+              this.call("/service/client", true).then(result => this.authenticated.service = result),
+              this.call("/service/goodrealmrole", true).then(result => this.authenticated.good = result),
+              this.call("/service/badrealmrole", true).then(result => this.authenticated.bad = result),
+              this.call("/service/client").then(result => this.anonymous.service = result),
+              this.call("/service/goodrealmrole").then(result => this.anonymous.good = result),
+              this.call("/service/badrealmrole").then(result => this.anonymous.bad = result)
+            ])
+            .catch(console.error);
+        })
+        .catch(err => {
+          console.log(err);
+          alert('failed to initialize keycloak');
+        });
+      },
+      methods: {
+        call(endpoint, useToken) {
+          const headers = useToken ? new Headers({ Authorization: `Bearer ${this.keycloak.token}` }): new Headers();
+
+          return fetch(`http://localhost:3001${endpoint}`, {
+            method: "GET",
+            headers
+          }).then(({ status }) => {
+            console.log("Response Status", status);
+            return status;
+          }).catch(err => {
+            console.log("Err", err);
+          });
+        }
+      }
+    });
+  </script>
+</html>

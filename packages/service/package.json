@@ -1,0 +1,22 @@
+{
+  "name": "@linagora/keycloak-resource-servers-sample-service",
+  "version": "0.0.0",
+  "author": "Christophe HAMERLING <chamerling@linagora.com>",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "lib"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "launch": "node index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.1",
+    "express-session": "^1.17.0",
+    "keycloak-connect": "^9.0.0"
+  }
+}
